@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">firebaseChat</string>
+    <string name="web_client_id" translatable="false">935540385679-usa2jjkqe9ipfq44d7mk2htsp65isapk.apps.googleusercontent.com</string>
+
+
+    <string name="info">Information</string>
+    <string name="light_mode">Light mode</string>
+    <string name="dark_mode">Dark mode</string>
+    <string name="sign_out">Sign out</string>
+</resources>
