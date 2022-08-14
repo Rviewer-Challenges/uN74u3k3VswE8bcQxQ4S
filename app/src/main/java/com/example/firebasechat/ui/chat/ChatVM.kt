@@ -4,29 +4,37 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebasechat.auth.AuthManager
 import com.example.firebasechat.auth.AuthState
+import com.example.firebasechat.data.MessageRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatVM @Inject constructor(
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val messageRepo: MessageRepo
 ) : ViewModel() {
 
-    private val _signedIn = MutableStateFlow(false)
-    val signedIn: StateFlow<Boolean> = _signedIn
+    private val _state = MutableStateFlow(ChatState())
+    val state: StateFlow<ChatState> = _state
 
     init {
         viewModelScope.launch {
-            authManager.authState.map { newAuthState ->
-                newAuthState is AuthState.SignedIn
-            }.collectLatest { newSignedIn ->
-                _signedIn.value = newSignedIn
+            combine(
+                authManager.authState,
+                messageRepo.messages
+            ) { authState, messages -> // TODO on new message always scroll down
+                ChatState(
+                    isSignedIn = authState is AuthState.SignedIn,
+                    messages = messages
+                )
+            }.collectLatest { newState ->
+                _state.value = newState
             }
         }
     }
@@ -34,8 +42,17 @@ class ChatVM @Inject constructor(
     fun onUIEvent(event: ChatUIEvent) {
         viewModelScope.launch(Dispatchers.Default) {
             when (event) {
-                ChatUIEvent.signIn -> authManager.signIn()
-                ChatUIEvent.signOut -> authManager.signOut()
+                is ChatUIEvent.SwapDarkLightMode -> {
+                    // TODO
+                }
+                is ChatUIEvent.SignIn -> authManager.signIn()
+                is ChatUIEvent.SignOut -> authManager.signOut()
+                is ChatUIEvent.OnEditorChanged -> {
+                    _state.value = state.value.copy(editor = event.newMessage)
+                }
+                is ChatUIEvent.OnMessageSent -> {
+                    messageRepo.sendMessage(state.value.editor)
+                }
             }
         }
     }

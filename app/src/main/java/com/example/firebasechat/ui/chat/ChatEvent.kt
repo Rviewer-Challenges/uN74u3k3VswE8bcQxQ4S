@@ -1,6 +1,10 @@
 package com.example.firebasechat.ui.chat
 
 sealed class ChatUIEvent {
-    object signIn: ChatUIEvent()
-    object signOut: ChatUIEvent()
+    object SwapDarkLightMode : ChatUIEvent()
+    object SignIn : ChatUIEvent()
+    object SignOut : ChatUIEvent()
+
+    data class OnEditorChanged(val newMessage: String) : ChatUIEvent()
+    object OnMessageSent : ChatUIEvent()
 }
