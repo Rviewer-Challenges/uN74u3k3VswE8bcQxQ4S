@@ -30,7 +30,7 @@ class ChatVM @Inject constructor(
                 messageRepo.messages
             ) { authState, messages -> // TODO on new message always scroll down
                 ChatState(
-                    isSignedIn = authState is AuthState.SignedIn,
+                    isSignedIn = authState is AuthState.SignedIn, // TODO just pass auth state directly
                     messages = messages
                 )
             }.collectLatest { newState ->

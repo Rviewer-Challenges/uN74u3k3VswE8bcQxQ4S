@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.firebasechat.R
-import com.example.firebasechat.data.Message
+import com.example.firebasechat.data.models.Message
 import com.example.firebasechat.ui.theme.FirebaseChatTheme
 import com.example.firebasechat.ui.theme.LightGray
 import com.example.firebasechat.ui.theme.MessageBubbleShape

@@ -1,25 +1,30 @@
 package com.example.firebasechat.di
 
-import com.example.firebasechat.auth.AuthManager
-import com.example.firebasechat.auth.AuthManagerImpl
-import com.example.firebasechat.data.MessageRepo
-import com.example.firebasechat.data.MessagesRepoImpl
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import javax.inject.Qualifier
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class Modules {
+object Modules {
 
-    @Binds
-    abstract fun bindAuthManager(
-        authManagerImpl: AuthManagerImpl
-    ): AuthManager
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class DispatcherDefault
 
-    @Binds
-    abstract fun bindMessageRepo(
-        messagesRepoImpl: MessagesRepoImpl
-    ): MessageRepo
+    @Provides
+    @Singleton
+    fun provideExternalScope(): CoroutineScope = CoroutineScope(SupervisorJob())
+
+    @Provides
+    @Singleton
+    @DispatcherDefault
+    fun provideDispatcherDefault(): CoroutineDispatcher = Dispatchers.Default
 }
