@@ -2,8 +2,8 @@ package com.example.firebasechat.di
 
 import com.example.firebasechat.auth.AuthManager
 import com.example.firebasechat.auth.AuthManagerImpl
-import com.example.firebasechat.data.MessageRepo
-import com.example.firebasechat.data.MessagesRepoImpl
+import com.example.firebasechat.messages.MessageRepo
+import com.example.firebasechat.messages.MessagesRepoImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

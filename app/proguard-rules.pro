@@ -22,6 +22,10 @@
 
 -keepattributes Signature
 
--keepclassmembers class com.example.firebasechat.data.models.** {
+-keepclassmembers class com.example.firebasechat.messages.model.** {
+  *;
+}
+
+-keepclassmembers class com.example.firebasechat.auth.model.** {
   *;
 }

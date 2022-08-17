@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebasechat.auth.AuthManager
 import com.example.firebasechat.auth.AuthState
-import com.example.firebasechat.data.MessageRepo
+import com.example.firebasechat.messages.MessageRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

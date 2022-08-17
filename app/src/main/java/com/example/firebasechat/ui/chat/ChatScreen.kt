@@ -2,29 +2,32 @@ package com.example.firebasechat.ui.chat
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.firebasechat.R
-import com.example.firebasechat.data.models.Message
-import com.example.firebasechat.ui.theme.FirebaseChatTheme
-import com.example.firebasechat.ui.theme.LightGray
-import com.example.firebasechat.ui.theme.MessageBubbleShape
-import com.example.firebasechat.ui.theme.SelfMessageBubbleShape
+import com.example.firebasechat.messages.model.Message
+import com.example.firebasechat.ui.theme.*
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootNavGraph
 import com.example.firebasechat.ui.chat.ChatUIEvent as UIEvent
@@ -50,35 +53,28 @@ private fun AuthScreenContent(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             TopActionsRow(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .zIndex(1f), // Draw on top
                 isDarkMode = state.value.isDarkMode,
                 isSignedIn = state.value.isSignedIn,
                 onSwapDarkLightMode = { onUIEvent(UIEvent.SwapDarkLightMode) },
                 onSignOut = { onUIEvent(UIEvent.SignOut) }
             )
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                MessageList(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(),
-                    messages = state.value.messages
-                )
-                BottomSection(
-                    modifier = Modifier.fillMaxWidth(),
-                    isSignedIn = state.value.isSignedIn,
-                    editor = state.value.editor,
-                    onEditorChanged = { newMessage -> onUIEvent(UIEvent.OnEditorChanged(newMessage)) },
-                    onMessageSent = { onUIEvent(UIEvent.OnMessageSent) },
-                    onSignIn = { onUIEvent(UIEvent.SignIn) }
-                )
-            }
+            MessageList(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(),
+                messages = state.value.messages
+            )
+            BottomSection(
+                modifier = Modifier.fillMaxWidth(),
+                isSignedIn = state.value.isSignedIn,
+                editor = state.value.editor,
+                onEditorChanged = { newMessage -> onUIEvent(UIEvent.OnEditorChanged(newMessage)) },
+                onMessageSent = { onUIEvent(UIEvent.OnMessageSent) },
+                onSignIn = { onUIEvent(UIEvent.SignIn) }
+            )
         }
     }
 }
@@ -93,7 +89,7 @@ private fun TopActionsRow(
 ) {
     Surface(
         modifier = modifier,
-        shadowElevation = 4.dp
+        shadowElevation = 6.dp
     ) {
         Row(
             modifier = Modifier
@@ -141,11 +137,84 @@ private fun MessageList(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom)
+        contentPadding = PaddingValues(6.dp)
     ) {
-        items(items = messages, key = Message::id) { message ->
-            MessageBubble(message = message)
+        itemsIndexed(
+            items = messages,
+            key = { _, message -> message.uid }
+        ) { index, message ->
+            val firstByUser = index == 0 || messages[index - 1].user != message.user
+            val topSpacing = if (firstByUser && index != 0) PaddingValues(top =10.dp) else PaddingValues()
+
+            MessageCell(
+                modifier = Modifier.padding(topSpacing),
+                message = message,
+                firstByUser = firstByUser
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageCell(
+    modifier: Modifier = Modifier,
+    message: Message,
+    firstByUser: Boolean // TODO draw a header with the photoURL and the name
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 2.dp)
+    ) {
+        val alignment = if (message.isSelf) Alignment.TopEnd else Alignment.TopStart
+        val backgroundColor = if (message.isSelf) Color.Black else LightGray
+        val shape = when {
+            firstByUser && message.isSelf -> FirstSelfMessageBubbleShape
+            firstByUser && !message.isSelf -> FirstMessageBubbleShape
+            else -> MessageBubbleShape
+        }
+
+        Box(
+            modifier = modifier
+                .align(alignment)
+                .fillMaxWidth(0.82f) // Don't let the messages extend all the way to the other side
+        ) {
+            if (!message.isSelf && firstByUser) {
+                Row(
+                    modifier = Modifier
+                        .align(alignment)
+                        .requiredHeight(IntrinsicSize.Max)
+                ) {
+                    AsyncImage(
+                        model = message.user?.photoUrl
+                            ?: "https://www.princeton.edu/sites/default/files/styles/half_2x/public/images/2022/02/KOA_Nassau_2697x1517.jpg",
+                        contentDescription = stringResource(R.string.avatar),
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(top = 2.dp, bottom = 2.dp, end = 6.dp)
+                            .aspectRatio(1f)
+                            .clip(CircleShape)
+                    )
+                    Column {
+                        Text(
+                            text = message.user?.name ?: stringResource(R.string.unknown),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        MessageBubble(
+                            text = message.text,
+                            backgroundColor = backgroundColor,
+                            shape = shape
+                        )
+                    }
+                }
+            } else {
+                MessageBubble(
+                    modifier = Modifier.align(alignment),
+                    text = message.text,
+                    backgroundColor = backgroundColor,
+                    shape = shape
+                )
+            }
         }
     }
 }
@@ -153,23 +222,20 @@ private fun MessageList(
 @Composable
 private fun MessageBubble(
     modifier: Modifier = Modifier,
-    message: Message
+    text: String,
+    backgroundColor: Color,
+    shape: Shape,
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        val alignment = if (message.isSelf) Alignment.TopEnd else Alignment.TopStart
-        val backgroundColor = if (message.isSelf) Color.Black else LightGray
-        val shape = if (message.isSelf) SelfMessageBubbleShape else MessageBubbleShape
-
-        Surface(
-            modifier = modifier.align(alignment),
-            color = backgroundColor,
-            shape = shape
-        ) {
-            Text(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                text = message.text
-            )
-        }
+    Surface(
+        modifier = modifier,
+        color = backgroundColor,
+        shape = shape
+    ) {
+        Text(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            text = text,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
@@ -184,7 +250,7 @@ private fun BottomSection(
 ) {
     Surface(
         modifier = modifier,
-        shadowElevation = 4.dp
+        shadowElevation = 6.dp
     ) {
         Box(
             modifier = Modifier
@@ -214,16 +280,31 @@ private fun Editor(
     onMessageSent: () -> Unit
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        OutlinedTextField(
-            modifier = Modifier.weight(1f),
+        val interactionSource = remember { MutableInteractionSource() }
+        BasicTextField(
             value = message,
             onValueChange = onMessageChanged,
+            modifier = Modifier.weight(1f),
+            interactionSource = interactionSource,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions { onMessageSent() }
-        )
+            keyboardActions = KeyboardActions { onMessageSent() },
+        ) { innerTextField ->
+            TextFieldDefaults.TextFieldDecorationBox(
+                value = message,
+                placeholder = { Text(stringResource(R.string.editor_placeholder)) },
+                innerTextField = innerTextField,
+                interactionSource = interactionSource,
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                singleLine = false,
+                enabled = true,
+                visualTransformation = VisualTransformation.None
+            )
+        }
 
         AnimatedVisibility(
             visible = message.isNotBlank()
@@ -287,9 +368,23 @@ fun TopActionsRowPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun EditorPreview() {
+private fun EditorEmptyPreview() {
     FirebaseChatTheme {
         var message by remember { mutableStateOf("") }
+
+        Editor(
+            message = message,
+            onMessageChanged = { message = it },
+            onMessageSent = { message = "" }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EditorPreview() {
+    FirebaseChatTheme {
+        var message by remember { mutableStateOf("test message") }
 
         Editor(
             message = message,

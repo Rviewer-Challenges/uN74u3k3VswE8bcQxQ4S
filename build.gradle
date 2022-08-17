@@ -4,6 +4,7 @@ buildscript {
         destinations_version = '1.7.15-beta'
         hilt_version = '2.43.2'
         accompanist_version = '0.26.1-alpha'
+        coil_version = '2.2.0'
     }
 }
 

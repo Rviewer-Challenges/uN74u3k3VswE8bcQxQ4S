@@ -60,6 +60,10 @@ android {
             freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
         }
     }
+
+    defaultConfig {
+        buildConfigField "String", "FIREBASE_URL", '"https://fir-chat-54f7d-default-rtdb.europe-west1.firebasedatabase.app/"'
+    }
 }
 
 dependencies {
@@ -89,6 +93,9 @@ dependencies {
     // Navigation
     implementation "io.github.raamcosta.compose-destinations:core:$destinations_version"
     ksp "io.github.raamcosta.compose-destinations:ksp:$destinations_version"
+
+    // Coil
+    implementation "io.coil-kt:coil-compose:$coil_version"
 
     // Accompanist
     implementation "com.google.accompanist:accompanist-systemuicontroller:$accompanist_version"

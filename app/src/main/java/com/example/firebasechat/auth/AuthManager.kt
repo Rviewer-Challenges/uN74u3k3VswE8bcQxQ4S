@@ -10,7 +10,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import com.example.firebasechat.BuildConfig
 import com.example.firebasechat.R
+import com.example.firebasechat.auth.model.UserSnapshot
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
@@ -20,6 +22,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,14 +57,11 @@ class AuthManagerImpl @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unknown)
     override val authState: StateFlow<AuthState> = _authState
 
+    private val firebaseUsers = Firebase.database(BuildConfig.FIREBASE_URL).reference.child("users")
+
     private lateinit var activity: ComponentActivity
     private lateinit var launcher: ActivityResultLauncher<IntentSenderRequest>
     private lateinit var oneTapClient: SignInClient
-
-    // ???
-//    val name = user.displayName
-//    val email = user.email
-//    val photoUrl = user.photoUrl
 
     init {
         Firebase.auth.addAuthStateListener(this)
@@ -104,7 +104,7 @@ class AuthManagerImpl @Inject constructor(
                 BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                     .setSupported(true)
                     .setServerClientId(context.getString(R.string.web_client_id))
-                    .setFilterByAuthorizedAccounts(true) // True to only show accounts previously used to sign in.
+                    .setFilterByAuthorizedAccounts(false) // True to only show accounts previously used to sign in.
                     .build()
             )
             .setAutoSelectEnabled(true)
@@ -119,33 +119,7 @@ class AuthManagerImpl @Inject constructor(
                 logcat { "Couldn't start One Tap UI: ${e.localizedMessage}, failed to authorize" }
                 _authState.value = AuthState.SignedOut
             } else {
-                logcat { "No authorized saved credentials found: ${e.localizedMessage}, starting sign up flow" }
-                signUp()
-            }
-        }
-    }
-
-    private suspend fun signUp() {
-        val signUpRequest = BeginSignInRequest.builder()
-            .setGoogleIdTokenRequestOptions(
-                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
-                    .setSupported(true)
-                    .setServerClientId(context.getString(R.string.web_client_id))
-                    .setFilterByAuthorizedAccounts(false)
-                    .build()
-            )
-            .setAutoSelectEnabled(true)
-            .build()
-
-        try {
-            val result = oneTapClient.beginSignIn(signUpRequest).await()
-            launcher.launch(IntentSenderRequest.Builder(result.pendingIntent.intentSender).build())
-        } catch (e: Exception) {
-            if (e is IntentSender.SendIntentException) {
-                logcat { "Couldn't start One Tap UI: ${e.localizedMessage}, failed to authorize" }
-                _authState.value = AuthState.SignedOut
-            } else {
-                logcat { "No saved credentials found: ${e.localizedMessage}, failed to authorize" }
+                logcat { "No available credentials found: ${e.localizedMessage}, failed to authorie" }
                 _authState.value = AuthState.SignedOut
             }
         }
@@ -162,6 +136,11 @@ class AuthManagerImpl @Inject constructor(
                         if (!task.isSuccessful) {
                             logcat { "signInWithCredential:failure (${task.exception?.asLog()}), failed to authorize" }
                             _authState.value = AuthState.SignedOut
+                        } else {
+                            task.result.user?.let { user ->
+                                // Store (or update) the user information
+                                firebaseUsers.child(user.uid).setValue(UserSnapshot(user.displayName, user.photoUrl.toString()))
+                            }
                         }
                     }
             } else {
