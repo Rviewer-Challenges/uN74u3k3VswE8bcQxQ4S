@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.firebasechat.R
+import com.example.firebasechat.auth.AuthState
 import com.example.firebasechat.messages.model.Message
 import com.example.firebasechat.ui.theme.*
 import com.ramcosta.composedestinations.annotation.Destination
@@ -56,7 +57,7 @@ private fun AuthScreenContent(
         Column(modifier = Modifier.fillMaxSize()) {
             TopActionsRow(
                 isDarkMode = state.value.isDarkMode,
-                isSignedIn = state.value.isSignedIn,
+                isSignedIn = state.value.authState is AuthState.SignedIn,
                 onSwapDarkLightMode = { onUIEvent(UIEvent.SwapDarkLightMode) },
                 onSignOut = { onUIEvent(UIEvent.SignOut) }
             )
@@ -69,7 +70,7 @@ private fun AuthScreenContent(
             )
             BottomSection(
                 modifier = Modifier.fillMaxWidth(),
-                isSignedIn = state.value.isSignedIn,
+                authState = state.value.authState,
                 editor = state.value.editor,
                 onEditorChanged = { newMessage -> onUIEvent(UIEvent.OnEditorChanged(newMessage)) },
                 onMessageSent = { onUIEvent(UIEvent.OnMessageSent) },
@@ -144,7 +145,7 @@ private fun MessageList(
             key = { _, message -> message.uid }
         ) { index, message ->
             val firstByUser = index == 0 || messages[index - 1].user != message.user
-            val topSpacing = if (firstByUser && index != 0) PaddingValues(top =10.dp) else PaddingValues()
+            val topSpacing = if (firstByUser && index != 0) PaddingValues(top = 10.dp) else PaddingValues()
 
             MessageCell(
                 modifier = Modifier.padding(topSpacing),
@@ -159,7 +160,7 @@ private fun MessageList(
 private fun MessageCell(
     modifier: Modifier = Modifier,
     message: Message,
-    firstByUser: Boolean // TODO draw a header with the photoURL and the name
+    firstByUser: Boolean
 ) {
     Box(
         modifier = Modifier
@@ -180,33 +181,12 @@ private fun MessageCell(
                 .fillMaxWidth(0.82f) // Don't let the messages extend all the way to the other side
         ) {
             if (!message.isSelf && firstByUser) {
-                Row(
-                    modifier = Modifier
-                        .align(alignment)
-                        .requiredHeight(IntrinsicSize.Max)
-                ) {
-                    AsyncImage(
-                        model = message.user?.photoUrl
-                            ?: "https://www.princeton.edu/sites/default/files/styles/half_2x/public/images/2022/02/KOA_Nassau_2697x1517.jpg",
-                        contentDescription = stringResource(R.string.avatar),
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .padding(top = 2.dp, bottom = 2.dp, end = 6.dp)
-                            .aspectRatio(1f)
-                            .clip(CircleShape)
-                    )
-                    Column {
-                        Text(
-                            text = message.user?.name ?: stringResource(R.string.unknown),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        MessageBubble(
-                            text = message.text,
-                            backgroundColor = backgroundColor,
-                            shape = shape
-                        )
-                    }
-                }
+                MessageWithAuthor(
+                    modifier = Modifier.align(alignment),
+                    message = message,
+                    backgroundColor = backgroundColor,
+                    shape = shape
+                )
             } else {
                 MessageBubble(
                     modifier = Modifier.align(alignment),
@@ -215,6 +195,37 @@ private fun MessageCell(
                     shape = shape
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun MessageWithAuthor(
+    modifier: Modifier = Modifier,
+    message: Message,
+    backgroundColor: Color,
+    shape: Shape,
+) {
+    Row(modifier = modifier.requiredHeight(IntrinsicSize.Max)) {
+        AsyncImage(
+            model = message.user?.photoUrl ?: stringResource(R.string.default_photo_url),
+            contentDescription = stringResource(R.string.avatar),
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(top = 2.dp, bottom = 2.dp, end = 6.dp)
+                .aspectRatio(1f)
+                .clip(CircleShape)
+        )
+        Column {
+            Text(
+                text = message.user?.name ?: stringResource(R.string.unknown),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            MessageBubble(
+                text = message.text,
+                backgroundColor = backgroundColor,
+                shape = shape
+            )
         }
     }
 }
@@ -242,7 +253,7 @@ private fun MessageBubble(
 @Composable
 private fun BottomSection(
     modifier: Modifier = Modifier,
-    isSignedIn: Boolean,
+    authState: AuthState,
     editor: String,
     onEditorChanged: (String) -> Unit,
     onMessageSent: () -> Unit,
@@ -259,14 +270,14 @@ private fun BottomSection(
                 .imePadding(),
             contentAlignment = Alignment.Center
         ) {
-            if (isSignedIn) {
-                Editor(
+            when(authState) {
+                is AuthState.SignedIn -> Editor(
                     message = editor,
                     onMessageChanged = onEditorChanged,
                     onMessageSent = onMessageSent
                 )
-            } else {
-                SignInButton(onSignIn = onSignIn)
+                is AuthState.SigningIn -> SignInButton(onSignIn = onSignIn, loading = true)
+                else -> SignInButton(onSignIn = onSignIn, loading = false)
             }
         }
     }
@@ -325,7 +336,8 @@ private fun Editor(
 @Composable
 private fun SignInButton(
     modifier: Modifier = Modifier,
-    onSignIn: () -> Unit
+    onSignIn: () -> Unit,
+    loading: Boolean
 ) {
     Button(
         modifier = modifier,
@@ -334,6 +346,7 @@ private fun SignInButton(
             vertical = 12.dp
         ),
         shape = MaterialTheme.shapes.medium,
+        enabled = !loading,
         onClick = onSignIn
     ) {
         Icon(
@@ -345,7 +358,7 @@ private fun SignInButton(
             contentDescription = null
         )
         Text(
-            text = "Join in with Google"
+            text =  stringResource(if(!loading) R.string.join_with_google else R.string.joining)
         )
     }
 }
@@ -398,6 +411,6 @@ private fun EditorPreview() {
 @Composable
 fun SignInButtonPreview() {
     FirebaseChatTheme {
-        SignInButton(onSignIn = { })
+        SignInButton(onSignIn = { }, loading = false)
     }
 }

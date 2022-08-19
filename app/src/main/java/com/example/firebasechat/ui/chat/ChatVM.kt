@@ -3,7 +3,6 @@ package com.example.firebasechat.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebasechat.auth.AuthManager
-import com.example.firebasechat.auth.AuthState
 import com.example.firebasechat.messages.MessageRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +29,7 @@ class ChatVM @Inject constructor(
                 messageRepo.messages
             ) { authState, messages -> // TODO on new message always scroll down
                 ChatState(
-                    isSignedIn = authState is AuthState.SignedIn, // TODO just pass auth state directly
+                    authState = authState,
                     messages = messages
                 )
             }.collectLatest { newState ->

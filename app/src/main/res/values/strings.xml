@@ -11,4 +11,7 @@
     <string name="editor_placeholder">Type your message…</string>
     <string name="avatar">Avatar</string>
     <string name="unknown">Unknown</string>
+    <string name="default_photo_url">https://www.princeton.edu/sites/default/files/styles/half_2x/public/images/2022/02/KOA_Nassau_2697x1517.jpg</string>
+    <string name="join_with_google">Join in with Google</string>
+    <string name="joining">Joining…</string>
 </resources>
