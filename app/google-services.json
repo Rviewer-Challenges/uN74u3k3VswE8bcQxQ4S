@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "935540385679",
+    "firebase_url": "https://fir-chat-54f7d-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "fir-chat-54f7d",
     "storage_bucket": "fir-chat-54f7d.appspot.com"
   },
@@ -22,11 +23,19 @@
           }
         },
         {
-          "client_id": "935540385679-coa3iuudelmk888o7krs1943vu1b2u7b.apps.googleusercontent.com",
+          "client_id": "935540385679-ekg3t22il0qbic2f935d9jtpahkhsoud.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.firebasechat",
             "certificate_hash": "7ce4b0379e67e7180fb955590aa7dc5258df47fa"
+          }
+        },
+        {
+          "client_id": "935540385679-vijlmot1dmn3017v2igh3dpa2mdaifj5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.firebasechat",
+            "certificate_hash": "df16dc78661d19833e7f66f8200352b08d3e7ee1"
           }
         },
         {

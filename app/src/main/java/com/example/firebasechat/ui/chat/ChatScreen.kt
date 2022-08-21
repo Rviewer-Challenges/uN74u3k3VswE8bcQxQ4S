@@ -27,10 +27,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.firebasechat.R
 import com.example.firebasechat.auth.AuthState
+import com.example.firebasechat.auth.model.User
 import com.example.firebasechat.messages.model.Message
 import com.example.firebasechat.ui.theme.*
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootNavGraph
+import java.text.SimpleDateFormat
+import java.util.*
 import com.example.firebasechat.ui.chat.ChatUIEvent as UIEvent
 
 @RootNavGraph(start = true)
@@ -64,8 +67,7 @@ private fun AuthScreenContent(
             MessageList(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(),
+                    .weight(1f),
                 messages = state.value.messages
             )
             BottomSection(
@@ -145,7 +147,8 @@ private fun MessageList(
             key = { _, message -> message.uid }
         ) { index, message ->
             val firstByUser = index == 0 || messages[index - 1].user != message.user
-            val topSpacing = if (firstByUser && index != 0) PaddingValues(top = 10.dp) else PaddingValues()
+            val topSpacing =
+                if (firstByUser && index != 0) PaddingValues(top = 10.dp) else PaddingValues()
 
             MessageCell(
                 modifier = Modifier.padding(topSpacing),
@@ -191,6 +194,7 @@ private fun MessageCell(
                 MessageBubble(
                     modifier = Modifier.align(alignment),
                     text = message.text,
+                    createdAt = message.createdAt,
                     backgroundColor = backgroundColor,
                     shape = shape
                 )
@@ -206,14 +210,13 @@ private fun MessageWithAuthor(
     backgroundColor: Color,
     shape: Shape,
 ) {
-    Row(modifier = modifier.requiredHeight(IntrinsicSize.Max)) {
+    Row(modifier = modifier) {
         AsyncImage(
             model = message.user?.photoUrl ?: stringResource(R.string.default_photo_url),
             contentDescription = stringResource(R.string.avatar),
             modifier = Modifier
-                .fillMaxHeight()
                 .padding(top = 2.dp, bottom = 2.dp, end = 6.dp)
-                .aspectRatio(1f)
+                .size(52.dp)
                 .clip(CircleShape)
         )
         Column {
@@ -223,6 +226,7 @@ private fun MessageWithAuthor(
             )
             MessageBubble(
                 text = message.text,
+                createdAt = message.createdAt,
                 backgroundColor = backgroundColor,
                 shape = shape
             )
@@ -230,10 +234,14 @@ private fun MessageWithAuthor(
     }
 }
 
+// TODO: show full date for messages not from today
+private val formatter = SimpleDateFormat("hh:mm")
+
 @Composable
 private fun MessageBubble(
     modifier: Modifier = Modifier,
     text: String,
+    createdAt: Date,
     backgroundColor: Color,
     shape: Shape,
 ) {
@@ -242,11 +250,22 @@ private fun MessageBubble(
         color = backgroundColor,
         shape = shape
     ) {
-        Text(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            text = text,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Text(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .padding(end = 6.dp),
+                text = text,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = formatter.format(createdAt),
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
     }
 }
 
@@ -270,7 +289,7 @@ private fun BottomSection(
                 .imePadding(),
             contentAlignment = Alignment.Center
         ) {
-            when(authState) {
+            when (authState) {
                 is AuthState.SignedIn -> Editor(
                     message = editor,
                     onMessageChanged = onEditorChanged,
@@ -358,7 +377,7 @@ private fun SignInButton(
             contentDescription = null
         )
         Text(
-            text =  stringResource(if(!loading) R.string.join_with_google else R.string.joining)
+            text = stringResource(if (!loading) R.string.join_with_google else R.string.joining)
         )
     }
 }
@@ -389,6 +408,38 @@ private fun EditorEmptyPreview() {
             message = message,
             onMessageChanged = { message = it },
             onMessageSent = { message = "" }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChatPreview() {
+    FirebaseChatTheme {
+        val users = listOf(
+            User("1", "John", null),
+            User("2", "Michael", null),
+            User("3", "George", null),
+        )
+        val messages = listOf(
+            Message("1", "First message", Date(), users[0], false),
+            Message("2", "another one", Date(), users[0], false),
+            Message(
+                "3",
+                "and this is all I had to say for now, I'm gucci for now. Does this long message wrap nicely?",
+                Date(),
+                users[0],
+                false
+            ),
+            Message("4", "here's a reply from me", Date(), users[1], true),
+            Message("5", "and I'll finish it off with this one", Date(), users[2], false),
+            Message("6", "and the last", Date(), users[2], false),
+            Message("7", "watch me do a perfectly long one a b c d e f", Date(), users[0], false),
+        )
+
+        MessageList(
+            modifier = Modifier.size(400.dp, 1200.dp),
+            messages = messages
         )
     }
 }
