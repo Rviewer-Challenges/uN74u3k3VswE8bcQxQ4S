@@ -5,6 +5,7 @@ buildscript {
         hilt_version = '2.43.2'
         accompanist_version = '0.26.1-alpha'
         coil_version = '2.2.0'
+        moshi_version = '1.13.0'
     }
 }
 

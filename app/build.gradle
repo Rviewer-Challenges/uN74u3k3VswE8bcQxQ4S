@@ -97,6 +97,9 @@ dependencies {
     // Coil
     implementation "io.coil-kt:coil-compose:$coil_version"
 
+    // Moshi
+    implementation "com.squareup.moshi:moshi:$moshi_version"
+
     // Accompanist
     implementation "com.google.accompanist:accompanist-systemuicontroller:$accompanist_version"
 

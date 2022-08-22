@@ -1,9 +1,8 @@
 package com.example.firebasechat.ui.chat
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.firebasechat.R
@@ -148,6 +149,10 @@ private fun MessageList(
     scrollState: LazyListState,
 ) {
     Box(modifier = modifier) {
+        val scope = rememberCoroutineScope()
+        val density = LocalDensity.current
+        var selected by remember { mutableStateOf<String?>(null) }
+
         LazyColumn(
             verticalArrangement = Arrangement.Top,
             state = scrollState,
@@ -164,36 +169,28 @@ private fun MessageList(
                 MessageCell(
                     modifier = Modifier.padding(topSpacing),
                     message = message,
-                    firstByUser = firstByUser
+                    firstByUser = firstByUser,
+                    selected = selected == message.uid,
+                    onPressed = {
+                        selected = if (selected == message.uid) null else message.uid
+                    }
                 )
             }
         }
 
-        val scope = rememberCoroutineScope()
-        val density = LocalDensity.current
+
         val scrollToBottomVisible by remember {
             derivedStateOf {
-                scrollState.firstVisibleItemIndex != 0 || scrollState.firstVisibleItemScrollOffset > with(density) { 48.dp.toPx() }
+                scrollState.firstVisibleItemIndex != 0
+                        || scrollState.firstVisibleItemScrollOffset > with(density) { 48.dp.toPx() }
             }
         }
 
-        AnimatedVisibility(
+        ScrollToBottomButton(
             modifier = Modifier.align(Alignment.BottomEnd),
             visible = scrollToBottomVisible,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            FloatingActionButton(
-                onClick = { scope.launch { scrollState.animateScrollToItem(0) } },
-                modifier = Modifier.padding(24.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_down),
-                    contentDescription = stringResource(R.string.scroll_down),
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-        }
+            onPressed = { scope.launch { scrollState.animateScrollToItem(0) } }
+        )
     }
 }
 
@@ -201,12 +198,15 @@ private fun MessageList(
 private fun MessageCell(
     modifier: Modifier = Modifier,
     message: Message,
-    firstByUser: Boolean
+    firstByUser: Boolean,
+    selected: Boolean,
+    onPressed: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 2.dp)
+            .clickable(onClick = onPressed)
     ) {
         val alignment = if (message.isSelf) Alignment.TopEnd else Alignment.TopStart
         val backgroundColor = if (message.isSelf) Color.Black else LightGray
@@ -225,14 +225,16 @@ private fun MessageCell(
                 MessageWithAuthor(
                     modifier = Modifier.align(alignment),
                     message = message,
+                    showReactionSelector = selected,
                     backgroundColor = backgroundColor,
                     shape = shape
                 )
             } else {
-                MessageBubble(
+                MessageBubbleWithReactions(
                     modifier = Modifier.align(alignment),
                     text = message.text,
                     createdAt = message.createdAt,
+                    showReactionSelector = selected,
                     backgroundColor = backgroundColor,
                     shape = shape
                 )
@@ -245,6 +247,7 @@ private fun MessageCell(
 private fun MessageWithAuthor(
     modifier: Modifier = Modifier,
     message: Message,
+    showReactionSelector: Boolean,
     backgroundColor: Color,
     shape: Shape,
 ) {
@@ -262,9 +265,10 @@ private fun MessageWithAuthor(
                 text = message.user?.name ?: stringResource(R.string.unknown),
                 style = MaterialTheme.typography.labelLarge,
             )
-            MessageBubble(
+            MessageBubbleWithReactions(
                 text = message.text,
                 createdAt = message.createdAt,
+                showReactionSelector = showReactionSelector,
                 backgroundColor = backgroundColor,
                 shape = shape
             )
@@ -276,21 +280,49 @@ private fun MessageWithAuthor(
 private val formatter = SimpleDateFormat("hh:mm")
 
 @Composable
-private fun MessageBubble(
+private fun MessageBubbleWithReactions(
     modifier: Modifier = Modifier,
+    text: String,
+    createdAt: Date,
+    showReactionSelector: Boolean,
+    backgroundColor: Color,
+    shape: Shape,
+) {
+    Column(
+        modifier = modifier.animateContentSize()
+    ) {
+        MessageBubble(
+            text = text,
+            createdAt = createdAt,
+            backgroundColor = backgroundColor,
+            shape = shape
+        )
+        if (showReactionSelector) {
+            ReactionSelector(
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .align(Alignment.End)
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageBubble(
     text: String,
     createdAt: Date,
     backgroundColor: Color,
     shape: Shape,
 ) {
     Surface(
-        modifier = modifier,
+        modifier = Modifier,
         color = backgroundColor,
         shape = shape
     ) {
         Row(
-            modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
         ) {
             Text(
                 modifier = Modifier
@@ -302,6 +334,54 @@ private fun MessageBubble(
             Text(
                 text = formatter.format(createdAt),
                 style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+private val reactions = listOf("😀", "👍", "❤️", "😞")
+
+@Composable
+private fun ReactionSelector(
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.offset(y = (-6).dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        reactions.forEach {
+            Box(
+                modifier = Modifier
+                    .shadow(elevation = 2.dp, shape = CircleShape)
+                    .background(Color.White, CircleShape)
+                    .padding(3.dp)
+            ) {
+                Text(text = it, fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScrollToBottomButton(
+    modifier: Modifier = Modifier,
+    visible: Boolean,
+    onPressed: () -> Unit
+) {
+    AnimatedVisibility(
+        modifier = modifier,
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        FloatingActionButton(
+            onClick = onPressed,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_down),
+                contentDescription = stringResource(R.string.scroll_down),
+                modifier = Modifier.size(36.dp)
             )
         }
     }
@@ -460,19 +540,16 @@ private fun ChatPreview() {
             User("3", "George", null),
         )
         val messages = listOf(
-            Message("1", "First message", Date(), users[0], false),
-            Message("2", "another one", Date(), users[0], false),
+            Message("1", "First message", user = users[0]),
+            Message("2", "another one", Date(), user = users[0]),
             Message(
                 "3",
                 "and this is all I had to say for now, I'm gucci for now. Does this long message wrap nicely?",
-                Date(),
-                users[0],
-                false
+                user = users[0]
             ),
-            Message("4", "here's a reply from me", Date(), users[1], true),
-            Message("5", "and I'll finish it off with this one", Date(), users[2], false),
-            Message("6", "and the last", Date(), users[2], false),
-            Message("7", "watch me do a perfectly long one a b c d e f", Date(), users[0], false),
+            Message("4", "here's a reply from me", user = users[1], isSelf = true),
+            Message("5", "and I'll finish it off with this one", user = users[2]),
+            Message("6", "and the last", user = users[2]),
         )
 
         val scrollState = rememberLazyListState()
