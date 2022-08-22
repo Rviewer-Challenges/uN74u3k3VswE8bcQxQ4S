@@ -57,7 +57,7 @@ class MessagesRepoImpl @Inject constructor(
                 user = users[newMessageSnapshot.authorUid],
                 isSelf = userUid != null && userUid == newMessageSnapshot.authorUid
             )
-            _messages.value = messages.value + newMessage
+            _messages.value = listOf(newMessage) + messages.value
         }
 
         override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
@@ -98,10 +98,10 @@ class MessagesRepoImpl @Inject constructor(
         }
     }
 
-        init {
-            initData()
-            observeAuth()
-        }
+    init {
+        initData()
+        observeAuth()
+    }
 
     private fun initData() {
         // Load messages
@@ -140,7 +140,7 @@ class MessagesRepoImpl @Inject constructor(
                 user = users[message.second.authorUid],
                 isSelf = userUid != null && userUid == message.second.authorUid
             )
-        }
+        }.reversed()
         firebaseMessages.addChildEventListener(messagesListener)
     }
 

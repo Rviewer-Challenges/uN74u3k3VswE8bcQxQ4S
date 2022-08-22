@@ -2,10 +2,14 @@ package com.example.firebasechat.ui.chat
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -17,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -32,6 +37,7 @@ import com.example.firebasechat.messages.model.Message
 import com.example.firebasechat.ui.theme.*
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootNavGraph
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import com.example.firebasechat.ui.chat.ChatUIEvent as UIEvent
@@ -64,11 +70,13 @@ private fun AuthScreenContent(
                 onSwapDarkLightMode = { onUIEvent(UIEvent.SwapDarkLightMode) },
                 onSignOut = { onUIEvent(UIEvent.SignOut) }
             )
+            val scrollState = rememberLazyListState()
             MessageList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                messages = state.value.messages
+                messages = state.value.messages,
+                scrollState = scrollState
             )
             BottomSection(
                 modifier = Modifier.fillMaxWidth(),
@@ -137,24 +145,54 @@ private fun TopActionsRow(
 private fun MessageList(
     modifier: Modifier = Modifier,
     messages: List<Message>,
+    scrollState: LazyListState,
 ) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(6.dp)
-    ) {
-        itemsIndexed(
-            items = messages,
-            key = { _, message -> message.uid }
-        ) { index, message ->
-            val firstByUser = index == 0 || messages[index - 1].user != message.user
-            val topSpacing =
-                if (firstByUser && index != 0) PaddingValues(top = 10.dp) else PaddingValues()
+    Box(modifier = modifier) {
+        LazyColumn(
+            verticalArrangement = Arrangement.Top,
+            state = scrollState,
+            reverseLayout = true,
+            contentPadding = PaddingValues(6.dp)
+        ) {
+            itemsIndexed(
+                items = messages,
+                key = { _, message -> message.uid }
+            ) { index, message ->
+                val firstByUser = index == messages.lastIndex || messages[index + 1].user != message.user
+                val topSpacing = PaddingValues(top = if (firstByUser && index != messages.lastIndex) 10.dp else 0.dp)
 
-            MessageCell(
-                modifier = Modifier.padding(topSpacing),
-                message = message,
-                firstByUser = firstByUser
-            )
+                MessageCell(
+                    modifier = Modifier.padding(topSpacing),
+                    message = message,
+                    firstByUser = firstByUser
+                )
+            }
+        }
+
+        val scope = rememberCoroutineScope()
+        val density = LocalDensity.current
+        val scrollToBottomVisible by remember {
+            derivedStateOf {
+                scrollState.firstVisibleItemIndex != 0 || scrollState.firstVisibleItemScrollOffset > with(density) { 48.dp.toPx() }
+            }
+        }
+
+        AnimatedVisibility(
+            modifier = Modifier.align(Alignment.BottomEnd),
+            visible = scrollToBottomVisible,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            FloatingActionButton(
+                onClick = { scope.launch { scrollState.animateScrollToItem(0) } },
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_down),
+                    contentDescription = stringResource(R.string.scroll_down),
+                    modifier = Modifier.size(36.dp)
+                )
+            }
         }
     }
 }
@@ -437,9 +475,11 @@ private fun ChatPreview() {
             Message("7", "watch me do a perfectly long one a b c d e f", Date(), users[0], false),
         )
 
+        val scrollState = rememberLazyListState()
         MessageList(
             modifier = Modifier.size(400.dp, 1200.dp),
-            messages = messages
+            messages = messages,
+            scrollState = scrollState
         )
     }
 }

@@ -13,9 +13,9 @@ val Typography = Typography(
         letterSpacing = 0.2.sp
     ),
     labelLarge = TextStyle(
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Medium,
-        letterSpacing = 0.25.sp
+        fontSize = 16.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.3.sp
     ),
     labelSmall = TextStyle(
         fontSize = 11.sp,
