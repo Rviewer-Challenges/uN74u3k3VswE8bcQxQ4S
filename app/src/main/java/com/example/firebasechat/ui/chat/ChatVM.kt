@@ -52,6 +52,9 @@ class ChatVM @Inject constructor(
                 is ChatUIEvent.OnMessageSent -> {
                     messageRepo.sendMessage(state.value.editor)
                 }
+                is ChatUIEvent.OnReactionPressed -> {
+                    messageRepo.toggleReaction(event.emoji, event.messageUid)
+                }
             }
         }
     }

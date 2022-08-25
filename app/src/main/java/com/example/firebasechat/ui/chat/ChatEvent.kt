@@ -7,4 +7,5 @@ sealed class ChatUIEvent {
 
     data class OnEditorChanged(val newMessage: String) : ChatUIEvent()
     object OnMessageSent : ChatUIEvent()
+    data class OnReactionPressed(val emoji: String, val messageUid: String) : ChatUIEvent()
 }

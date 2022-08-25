@@ -4,32 +4,29 @@ import com.example.firebasechat.auth.model.User
 import com.google.firebase.database.IgnoreExtraProperties
 import java.util.*
 
-data class Message(
+data class Reaction(
     val uid: String,
-    val text: String,
+    val emoji: String,
     val createdAt: Date = Date(),
-    val reactions: List<Reaction> = emptyList(),
     val user: User? = null,
     val isSelf: Boolean = false
 )
 
 @IgnoreExtraProperties
-data class MessageSnapshot(
-    val text: String? = null,
+data class ReactionSnapshot(
+    val emoji: String? = null,
     val authorUid: String? = null,
     val createdAt: Long? = System.currentTimeMillis(), // TODO use "ServerValue.TIMESTAMP"
 )
 
-fun MessageSnapshot.toMessage(
+fun ReactionSnapshot.toReaction(
     uid: String,
     user: User?,
     isSelf: Boolean,
-    reactions: List<Reaction>
-) = Message(
+) = Reaction(
     uid = uid,
-    text = text!!,
+    emoji = emoji!!,
     createdAt = Date(createdAt!!),
-    reactions = reactions,
     user = user,
     isSelf = isSelf
 )

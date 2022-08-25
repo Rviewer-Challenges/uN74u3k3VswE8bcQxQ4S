@@ -7,9 +7,7 @@ import com.example.firebasechat.auth.model.User
 import com.example.firebasechat.auth.model.UserSnapshot
 import com.example.firebasechat.auth.model.toUser
 import com.example.firebasechat.di.Modules
-import com.example.firebasechat.messages.model.Message
-import com.example.firebasechat.messages.model.MessageSnapshot
-import com.example.firebasechat.messages.model.toMessage
+import com.example.firebasechat.messages.model.*
 import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -28,6 +26,7 @@ import javax.inject.Inject
 interface MessageRepo {
     val messages: StateFlow<List<Message>>
     fun sendMessage(content: String)
+    fun toggleReaction(emoji: String, messageUid: String)
 }
 
 class MessagesRepoImpl @Inject constructor(
@@ -55,21 +54,31 @@ class MessagesRepoImpl @Inject constructor(
             val newMessage = newMessageSnapshot.toMessage(
                 uid = uid,
                 user = users[newMessageSnapshot.authorUid],
-                isSelf = userUid != null && userUid == newMessageSnapshot.authorUid
+                isSelf = userUid != null && userUid == newMessageSnapshot.authorUid,
+                reactions = getReactions(snapshot)
             )
             _messages.value = listOf(newMessage) + messages.value
         }
 
         override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
-            logcat { "MESSAGE_TEST, onChildChanged 1" }
-            // TODO reactions?
+            val changedMessageSnapshot = snapshot.getValue<MessageSnapshot>() ?: return
+            val uid = snapshot.key!!
+            val userUid = (authManager.authState.value as? AuthState.SignedIn)?.user?.uid
+            val changedMessage = changedMessageSnapshot.toMessage(
+                uid = uid,
+                user = users[changedMessageSnapshot.authorUid],
+                isSelf = userUid != null && userUid == changedMessageSnapshot.authorUid,
+                reactions = getReactions(snapshot)
+            )
+
+            _messages.value = messages.value.map { existingMessage ->
+                if (existingMessage.uid == changedMessage.uid) changedMessage else existingMessage
+            }
         }
 
         override fun onChildRemoved(snapshot: DataSnapshot) {}
         override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
-        override fun onCancelled(databaseError: DatabaseError) {
-            logcat { "MESSAGE_TEST, on message listener cancelled" }
-        }
+        override fun onCancelled(databaseError: DatabaseError) {}
     }
 
     private val usersListener = object : ChildEventListener {
@@ -93,9 +102,7 @@ class MessagesRepoImpl @Inject constructor(
 
         override fun onChildRemoved(snapshot: DataSnapshot) {}
         override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
-        override fun onCancelled(databaseError: DatabaseError) {
-            logcat { "MESSAGE_TEST, on user listener cancelled" }
-        }
+        override fun onCancelled(databaseError: DatabaseError) {}
     }
 
     init {
@@ -110,12 +117,11 @@ class MessagesRepoImpl @Inject constructor(
             setInitialUsers(initialUsers)
             // Now load messages
             firebaseMessages.get().addOnSuccessListener { messagesSnapshot ->
-                val initialMessages = messagesSnapshot.children.map { it.key!! to it.getValue<MessageSnapshot>()!! }
                 if (authManager.authState.value is AuthState.SignedIn) {
                     val userUid = (authManager.authState.value as? AuthState.SignedIn)?.user?.uid
-                    setInitialMessages(initialMessages, userUid)
+                    setInitialMessages(messagesSnapshot, userUid)
                 } else {
-                    setInitialMessages(initialMessages)
+                    setInitialMessages(messagesSnapshot)
                 }
             }.addOnFailureListener {
                 // TODO
@@ -132,13 +138,15 @@ class MessagesRepoImpl @Inject constructor(
         firebaseUsers.addChildEventListener(usersListener)
     }
 
-    private fun setInitialMessages(initialMessages: List<Pair<String, MessageSnapshot>>, userUid: String? = null) {
-        _uidsAlreadyAdded.addAll(initialMessages.map { it.first })
-        _messages.value = initialMessages.map { message ->
-            message.second.toMessage(
-                uid = message.first,
-                user = users[message.second.authorUid],
-                isSelf = userUid != null && userUid == message.second.authorUid
+    private fun setInitialMessages(messagesSnapshot: DataSnapshot, userUid: String? = null) {
+        _uidsAlreadyAdded.addAll(messagesSnapshot.children.map { it.key!! })
+        _messages.value = messagesSnapshot.children.map { messageDataSnapshot ->
+            val messageSnapshot = messageDataSnapshot.getValue<MessageSnapshot>()!!
+            messageSnapshot.toMessage(
+                uid = messageDataSnapshot.key!!,
+                user = users[messageSnapshot.authorUid],
+                isSelf = userUid != null && userUid == messageSnapshot.authorUid,
+                reactions = getReactions(messageDataSnapshot)
             )
         }.reversed()
         firebaseMessages.addChildEventListener(messagesListener)
@@ -150,10 +158,17 @@ class MessagesRepoImpl @Inject constructor(
             authManager.authState.collectLatest { authState ->
                 when {
                     authState is AuthState.SignedIn && previous !is AuthState.SignedIn -> {
-                        _messages.value = messages.value.map { it.copy(isSelf = authState.user.uid == it.user?.uid) }
+                        _messages.value = messages.value.map { original ->
+                            original.copy(
+                                isSelf = authState.user.uid == original.user?.uid,
+                                reactions = original.reactions.map { it.copy(isSelf = authState.user.uid == it.user?.uid) }
+                            )
+                        }
                     }
                     authState !is AuthState.SignedIn && previous is AuthState.SignedIn -> {
-                        _messages.value = messages.value.map { it.copy(isSelf = false) }
+                        _messages.value = messages.value.map { original ->
+                            original.copy(isSelf = false, reactions = original.reactions.map { it.copy(isSelf = false) })
+                        }
                     }
                     else -> {
                         // Change between intermediate states, no need to do anything
@@ -164,9 +179,35 @@ class MessagesRepoImpl @Inject constructor(
         }
     }
 
+    private fun getReactions(messageDataSnapshot: DataSnapshot): List<Reaction> {
+        val userUid = (authManager.authState.value as? AuthState.SignedIn)?.user?.uid
+        return messageDataSnapshot.child("reactions").children.map {
+            val reactionSnapshot = it.getValue<ReactionSnapshot>()!!
+            reactionSnapshot.toReaction(
+                uid = it.key!!,
+                user = users[reactionSnapshot.authorUid],
+                isSelf = userUid != null && userUid == reactionSnapshot.authorUid
+            )
+        }
+    }
+
     override fun sendMessage(content: String) {
-        val userToken = (authManager.authState.value as? AuthState.SignedIn)?.user?.uid ?: return
+        val userUid = (authManager.authState.value as? AuthState.SignedIn)?.user?.uid ?: return
         val messageRef = firebaseMessages.push()
-        messageRef.setValue(MessageSnapshot(content, userToken))
+        messageRef.setValue(MessageSnapshot(content, userUid))
+    }
+
+    override fun toggleReaction(emoji: String, messageUid: String) {
+        val userUid = (authManager.authState.value as? AuthState.SignedIn)?.user?.uid ?: return
+        val message = messages.value.first { it.uid == messageUid }
+        val previousReaction = message.reactions.firstOrNull { it.isSelf && it.emoji == emoji }
+        if (previousReaction != null) {
+            // Reaction already exists, remove it
+            firebaseMessages.child(messageUid).child("reactions").child(previousReaction.uid).removeValue()
+        } else {
+            // Reaction doesn't exist, add it
+            val reactionRef = firebaseMessages.child(messageUid).child("reactions").push()
+            reactionRef.setValue(ReactionSnapshot(emoji, userUid))
+        }
     }
 }
