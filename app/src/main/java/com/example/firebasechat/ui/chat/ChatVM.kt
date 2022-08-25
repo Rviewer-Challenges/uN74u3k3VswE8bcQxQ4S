@@ -27,7 +27,7 @@ class ChatVM @Inject constructor(
             combine(
                 authManager.authState,
                 messageRepo.messages
-            ) { authState, messages -> // TODO on new message always scroll down
+            ) { authState, messages ->
                 ChatState(
                     authState = authState,
                     messages = messages
@@ -50,7 +50,7 @@ class ChatVM @Inject constructor(
                     _state.value = state.value.copy(editor = event.newMessage)
                 }
                 is ChatUIEvent.OnMessageSent -> {
-                    messageRepo.sendMessage(state.value.editor)
+                    messageRepo.sendMessage(state.value.editor.trim())
                 }
                 is ChatUIEvent.OnReactionPressed -> {
                     messageRepo.toggleReaction(event.emoji, event.messageUid)

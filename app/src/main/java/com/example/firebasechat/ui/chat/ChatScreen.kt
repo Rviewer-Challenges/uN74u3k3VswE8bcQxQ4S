@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -164,6 +163,15 @@ private fun MessageList(
         val scope = rememberCoroutineScope()
         val density = LocalDensity.current
         var selected by remember { mutableStateOf<String?>(null) }
+
+        // Scroll down on new messages
+        var previousMessageCount by remember { mutableStateOf(messages.size) }
+        LaunchedEffect(messages.size) {
+            if (messages.size > previousMessageCount) {
+                scope.launch { scrollState.animateScrollToItem(0) }
+            }
+            previousMessageCount = messages.size
+        }
 
         LazyColumn(
             verticalArrangement = Arrangement.Top,
@@ -490,8 +498,7 @@ private fun Editor(
             onValueChange = onMessageChanged,
             modifier = Modifier.weight(1f),
             interactionSource = interactionSource,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions { onMessageSent() },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
         ) { innerTextField ->
             TextFieldDefaults.TextFieldDecorationBox(
                 value = message,
