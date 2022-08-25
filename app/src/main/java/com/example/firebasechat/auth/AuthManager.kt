@@ -119,7 +119,7 @@ class AuthManagerImpl @Inject constructor(
                 logcat { "Couldn't start One Tap UI: ${e.localizedMessage}, failed to authorize" }
                 _authState.value = AuthState.SignedOut
             } else {
-                logcat { "No available credentials found: ${e.localizedMessage}, failed to authorie" }
+                logcat { "No available credentials found: ${e.localizedMessage}, failed to authorize" }
                 _authState.value = AuthState.SignedOut
             }
         }

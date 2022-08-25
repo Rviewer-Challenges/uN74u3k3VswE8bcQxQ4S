@@ -140,7 +140,7 @@ private fun TopActionsRow(
                     }
                 }
             }
-            if (isSignedIn) {
+            AnimatedVisibility(isSignedIn) {
                 IconButton(onClick = onSignOut) {
                     Icon(
                         painter = painterResource(R.drawable.ic_sign_out),
@@ -307,10 +307,10 @@ private fun MessageBubbleWithReactions(
     shape: Shape,
     onReactionPressed: (String) -> Unit
 ) {
-    val showReactions = derivedStateOf { selected || message.reactions.isNotEmpty() }
-    Box(modifier = modifier.animateContentSize()) {
-        val padding = animateDpAsState(targetValue = if (showReactions.value) 22.dp else 0.dp)
-        val alpha = animateFloatAsState(targetValue = if (showReactions.value) 1f else 0f)
+    val reactionsVisible = derivedStateOf { selected || message.reactions.isNotEmpty() }
+    Box(modifier = modifier) {
+        val padding = animateDpAsState(targetValue = if (reactionsVisible.value) 22.dp else 0.dp)
+        val alpha = animateFloatAsState(targetValue = if (reactionsVisible.value) 1f else 0f)
 
         MessageBubble(
             modifier = Modifier
@@ -329,7 +329,7 @@ private fun MessageBubbleWithReactions(
                 .align(if (message.isSelf) Alignment.BottomStart else Alignment.BottomEnd),
             reactions = message.reactions,
             onReactionPressed = onReactionPressed,
-            enabled = showReactions.value
+            enabled = reactionsVisible.value
         )
     }
 }
@@ -447,23 +447,25 @@ private fun BottomSection(
 ) {
     Surface(
         modifier = modifier,
-        shadowElevation = 6.dp
+        shadowElevation = 6.dp,
     ) {
-        Box(
+        Crossfade(
+            targetState = authState,
             modifier = Modifier
                 .padding(vertical = 6.dp, horizontal = 6.dp)
                 .navigationBarsPadding()
                 .imePadding(),
-            contentAlignment = Alignment.Center
-        ) {
-            when (authState) {
-                is AuthState.SignedIn -> Editor(
-                    message = editor,
-                    onMessageChanged = onEditorChanged,
-                    onMessageSent = onMessageSent
-                )
-                is AuthState.SigningIn -> SignInButton(onSignIn = onSignIn, loading = true)
-                else -> SignInButton(onSignIn = onSignIn, loading = false)
+        ) { targetState ->
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                when (targetState) {
+                    is AuthState.SignedIn -> Editor(
+                        message = editor,
+                        onMessageChanged = onEditorChanged,
+                        onMessageSent = onMessageSent
+                    )
+                    is AuthState.SigningIn -> SignInButton(onSignIn = onSignIn, loading = true)
+                    else -> SignInButton(onSignIn = onSignIn, loading = false)
+                }
             }
         }
     }
