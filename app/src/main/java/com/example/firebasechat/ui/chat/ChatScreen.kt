@@ -47,6 +47,8 @@ import com.example.firebasechat.ui.theme.FirstSelfMessageBubbleShape
 import com.example.firebasechat.ui.theme.MessageBubbleShape
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootNavGraph
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -153,7 +155,7 @@ private fun TopActionsRow(
 @Composable
 private fun MessageList(
     modifier: Modifier = Modifier,
-    messages: List<Message>,
+    messages: ImmutableList<Message>,
     scrollState: LazyListState,
     pressEnabled: Boolean,
     onReactionPressed: (String, String) -> Unit
@@ -182,8 +184,12 @@ private fun MessageList(
                 items = messages,
                 key = { _, message -> message.uid }
             ) { index, message ->
-                val firstByUser = index == messages.lastIndex || messages[index + 1].user != message.user
-                val topSpacing = PaddingValues(top = if (firstByUser && index != messages.lastIndex) 10.dp else 0.dp)
+                val firstByUser = remember(index, messages, message) {
+                    index == messages.lastIndex || messages[index + 1].user != message.user
+                }
+                val topSpacing = remember(index, firstByUser, messages) {
+                    PaddingValues(top = if (firstByUser && index != messages.lastIndex) 10.dp else 0.dp)
+                }
 
                 MessageCell(
                     modifier = Modifier.padding(topSpacing),
@@ -232,12 +238,14 @@ private fun MessageCell(
             .padding(bottom = 2.dp)
             .clickable(onClick = onPressed, enabled = pressEnabled)
     ) {
-        val alignment = if (message.isSelf) Alignment.TopEnd else Alignment.TopStart
+        val alignment = remember(message.isSelf) { if (message.isSelf) Alignment.TopEnd else Alignment.TopStart }
         val backgroundColor = if (message.isSelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-        val shape = when {
-            firstByUser && message.isSelf -> FirstSelfMessageBubbleShape
-            firstByUser && !message.isSelf -> FirstMessageBubbleShape
-            else -> MessageBubbleShape
+        val shape = remember(message.isSelf, firstByUser) {
+            when {
+                firstByUser && message.isSelf -> FirstSelfMessageBubbleShape
+                firstByUser && !message.isSelf -> FirstMessageBubbleShape
+                else -> MessageBubbleShape
+            }
         }
 
         Box(
@@ -345,10 +353,14 @@ private fun MessageBubbleWithReactions(
 private fun MessageBubble(
     modifier: Modifier = Modifier,
     text: String,
-    createdAt: Date,
+    createdAt: Long,
     backgroundColor: Color,
     shape: Shape,
 ) {
+    val createdAtString = remember(createdAt) {
+        formatter.format(Date(createdAt))
+    }
+
     Surface(
         modifier = modifier,
         color = backgroundColor,
@@ -367,19 +379,19 @@ private fun MessageBubble(
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = formatter.format(createdAt),
+                text = createdAtString,
                 style = MaterialTheme.typography.labelSmall
             )
         }
     }
 }
 
-private val emojis = listOf("😀", "👍", "❤️", "😞")
+private val emojis = persistentListOf("😀", "👍", "❤️", "😞")
 
 @Composable
 private fun ReactionSelector(
     modifier: Modifier = Modifier,
-    reactions: List<Reaction>,
+    reactions: ImmutableList<Reaction>,
     enabled: Boolean,
     onReactionPressed: (String) -> Unit
 ) {
@@ -603,9 +615,9 @@ private fun ChatPreview() {
             User("2", "Michael", null),
             User("3", "George", null),
         )
-        val messages = listOf(
+        val messages = persistentListOf(
             Message("1", "First message", user = users[0]),
-            Message("2", "another one", Date(), user = users[0]),
+            Message("2", "another one", user = users[0]),
             Message(
                 "3",
                 "and this is all I had to say for now, I'm gucci for now. Does this long message wrap nicely?",

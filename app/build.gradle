@@ -119,6 +119,9 @@ dependencies {
     // Accompanist
     implementation "com.google.accompanist:accompanist-systemuicontroller:$accompanist_version"
 
+    // Immutable collections for performance
+    implementation "org.jetbrains.kotlinx:kotlinx-collections-immutable:$immutable_collections_version"
+
     // Logging
     implementation "com.squareup.logcat:logcat:0.1"
 

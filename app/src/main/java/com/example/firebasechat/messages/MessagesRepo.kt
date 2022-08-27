@@ -14,6 +14,10 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +28,7 @@ import logcat.logcat
 import javax.inject.Inject
 
 interface MessageRepo {
-    val messages: StateFlow<List<Message>>
+    val messages: StateFlow<PersistentList<Message>>
     fun sendMessage(content: String)
     fun toggleReaction(emoji: String, messageUid: String)
 }
@@ -40,8 +44,8 @@ class MessagesRepoImpl @Inject constructor(
 
     private var _uidsAlreadyAdded = mutableSetOf<String>()
     private var users = mutableMapOf<String, User>()
-    private val _messages = MutableStateFlow<List<Message>>(emptyList())
-    override val messages: StateFlow<List<Message>> = _messages
+    private val _messages = MutableStateFlow<PersistentList<Message>>(persistentListOf())
+    override val messages: StateFlow<PersistentList<Message>> = _messages
 
     private val messagesListener = object : ChildEventListener {
         override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
@@ -57,7 +61,7 @@ class MessagesRepoImpl @Inject constructor(
                 isSelf = userUid != null && userUid == newMessageSnapshot.authorUid,
                 reactions = getReactions(snapshot)
             )
-            _messages.value = listOf(newMessage) + messages.value
+            _messages.value = persistentListOf(newMessage) + messages.value
         }
 
         override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
@@ -73,7 +77,7 @@ class MessagesRepoImpl @Inject constructor(
 
             _messages.value = messages.value.map { existingMessage ->
                 if (existingMessage.uid == changedMessage.uid) changedMessage else existingMessage
-            }
+            }.toPersistentList()
         }
 
         override fun onChildRemoved(snapshot: DataSnapshot) {}
@@ -148,7 +152,7 @@ class MessagesRepoImpl @Inject constructor(
                 isSelf = userUid != null && userUid == messageSnapshot.authorUid,
                 reactions = getReactions(messageDataSnapshot)
             )
-        }.reversed()
+        }.reversed().toPersistentList()
         firebaseMessages.addChildEventListener(messagesListener)
     }
 
@@ -161,14 +165,21 @@ class MessagesRepoImpl @Inject constructor(
                         _messages.value = messages.value.map { original ->
                             original.copy(
                                 isSelf = authState.user.uid == original.user?.uid,
-                                reactions = original.reactions.map { it.copy(isSelf = authState.user.uid == it.user?.uid) }
+                                reactions = original.reactions.map { reaction ->
+                                    reaction.copy(isSelf = authState.user.uid == reaction.user?.uid)
+                                }.toPersistentList()
                             )
-                        }
+                        }.toPersistentList()
                     }
                     authState !is AuthState.SignedIn && previous is AuthState.SignedIn -> {
                         _messages.value = messages.value.map { original ->
-                            original.copy(isSelf = false, reactions = original.reactions.map { it.copy(isSelf = false) })
-                        }
+                            original.copy(
+                                isSelf = false,
+                                reactions = original.reactions.map { reaction ->
+                                    reaction.copy(isSelf = false)
+                                }.toPersistentList()
+                            )
+                        }.toPersistentList()
                     }
                     else -> {
                         // Change between intermediate states, no need to do anything

@@ -1,14 +1,18 @@
 package com.example.firebasechat.messages.model
 
+import androidx.compose.runtime.Immutable
 import com.example.firebasechat.auth.model.User
 import com.google.firebase.database.IgnoreExtraProperties
-import java.util.*
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 
+@Immutable
 data class Message(
     val uid: String,
     val text: String,
-    val createdAt: Date = Date(),
-    val reactions: List<Reaction> = emptyList(),
+    val createdAt: Long = System.currentTimeMillis(),
+    val reactions: ImmutableList<Reaction> = persistentListOf(),
     val user: User? = null,
     val isSelf: Boolean = false
 )
@@ -28,8 +32,8 @@ fun MessageSnapshot.toMessage(
 ) = Message(
     uid = uid,
     text = text!!,
-    createdAt = Date(createdAt!!),
-    reactions = reactions,
+    createdAt = createdAt!!,
+    reactions = reactions.toPersistentList(),
     user = user,
     isSelf = isSelf
 )

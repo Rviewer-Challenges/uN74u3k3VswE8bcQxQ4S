@@ -2,12 +2,11 @@ package com.example.firebasechat.messages.model
 
 import com.example.firebasechat.auth.model.User
 import com.google.firebase.database.IgnoreExtraProperties
-import java.util.*
 
 data class Reaction(
     val uid: String,
     val emoji: String,
-    val createdAt: Date = Date(),
+    val createdAt: Long,
     val user: User? = null,
     val isSelf: Boolean = false
 )
@@ -26,7 +25,7 @@ fun ReactionSnapshot.toReaction(
 ) = Reaction(
     uid = uid,
     emoji = emoji!!,
-    createdAt = Date(createdAt!!),
+    createdAt = createdAt!!,
     user = user,
     isSelf = isSelf
 )
