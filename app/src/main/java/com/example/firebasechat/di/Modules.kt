@@ -17,11 +17,29 @@ object Modules {
 
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
+    annotation class DispatcherMain
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class DispatcherIO
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
     annotation class DispatcherDefault
 
     @Provides
     @Singleton
     fun provideExternalScope(): CoroutineScope = CoroutineScope(SupervisorJob())
+
+    @Provides
+    @Singleton
+    @DispatcherMain
+    fun provideDispatcherMain(): CoroutineDispatcher = Dispatchers.Main
+
+    @Provides
+    @Singleton
+    @DispatcherIO
+    fun provideDispatcherIO(): CoroutineDispatcher = Dispatchers.IO
 
     @Provides
     @Singleton

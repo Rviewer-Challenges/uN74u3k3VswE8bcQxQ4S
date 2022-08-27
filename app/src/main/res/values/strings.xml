@@ -6,6 +6,7 @@
     <string name="info">Information</string>
     <string name="light_mode">Light mode</string>
     <string name="dark_mode">Dark mode</string>
+    <string name="auto_mode">Auto mode</string>
     <string name="sign_out">Sign out</string>
     <string name="send">Send</string>
     <string name="editor_placeholder">Type your message…</string>

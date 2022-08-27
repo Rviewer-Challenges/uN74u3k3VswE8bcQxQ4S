@@ -3,6 +3,7 @@ package com.example.firebasechat.ui.chat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,6 +40,7 @@ import com.example.firebasechat.auth.AuthState
 import com.example.firebasechat.auth.model.User
 import com.example.firebasechat.messages.model.Message
 import com.example.firebasechat.messages.model.Reaction
+import com.example.firebasechat.settings.ThemeMode
 import com.example.firebasechat.ui.theme.FirebaseChatTheme
 import com.example.firebasechat.ui.theme.FirstMessageBubbleShape
 import com.example.firebasechat.ui.theme.FirstSelfMessageBubbleShape
@@ -73,9 +75,9 @@ private fun AuthScreenContent(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopActionsRow(
-                isDarkMode = state.value.isDarkMode,
+                themeMode = state.value.themeMode,
                 isSignedIn = state.value.authState is AuthState.SignedIn,
-                onSwapDarkLightMode = { onUIEvent(UIEvent.SwapDarkLightMode) },
+                onToggleThemeMode = { onUIEvent(UIEvent.SwapDarkLightMode) },
                 onSignOut = { onUIEvent(UIEvent.SignOut) }
             )
             val scrollState = rememberLazyListState()
@@ -103,9 +105,9 @@ private fun AuthScreenContent(
 @Composable
 private fun TopActionsRow(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
+    themeMode: ThemeMode,
     isSignedIn: Boolean,
-    onSwapDarkLightMode: () -> Unit,
+    onToggleThemeMode: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Surface(
@@ -116,25 +118,22 @@ private fun TopActionsRow(
             modifier = Modifier
                 .statusBarsPadding()
                 .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = { /*TODO*/ }) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_info),
-                    contentDescription = stringResource(R.string.info)
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = onSwapDarkLightMode) {
-                Crossfade(isDarkMode) { isDarkMode ->
-                    if (isDarkMode) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_light_mode),
-                            contentDescription = stringResource(R.string.light_mode)
+            IconButton(onClick = onToggleThemeMode) {
+                Crossfade(themeMode, animationSpec = tween(150)) { themeMode ->
+                    when (themeMode) {
+                        ThemeMode.System -> Icon(
+                            painter = painterResource(R.drawable.ic_mode_auto),
+                            contentDescription = stringResource(R.string.auto_mode)
                         )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_dark_mode),
+                        ThemeMode.Dark -> Icon(
+                            painter = painterResource(R.drawable.ic_mode_dark),
                             contentDescription = stringResource(R.string.dark_mode)
+                        )
+                        ThemeMode.Light -> Icon(
+                            painter = painterResource(R.drawable.ic_mode_light),
+                            contentDescription = stringResource(R.string.light_mode)
                         )
                     }
                 }
@@ -499,6 +498,7 @@ private fun Editor(
             modifier = Modifier.weight(1f),
             interactionSource = interactionSource,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
         ) { innerTextField ->
             TextFieldDefaults.TextFieldDecorationBox(
                 value = message,
@@ -508,7 +508,7 @@ private fun Editor(
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                 singleLine = false,
                 enabled = true,
-                visualTransformation = VisualTransformation.None
+                visualTransformation = VisualTransformation.None,
             )
         }
 
@@ -561,14 +561,20 @@ private fun SignInButton(
 @Preview(showBackground = true)
 @Composable
 fun TopActionsRowPreview() {
-    FirebaseChatTheme {
+    FirebaseChatTheme(ThemeMode.Light) {
         var isSignedIn by remember { mutableStateOf(true) }
-        var isDarkMode by remember { mutableStateOf(true) }
+        var themeMode by remember { mutableStateOf(ThemeMode.Default) }
 
         TopActionsRow(
-            isDarkMode = isDarkMode,
+            themeMode = themeMode,
             isSignedIn = isSignedIn,
-            onSwapDarkLightMode = { isDarkMode = !isDarkMode },
+            onToggleThemeMode = {
+                themeMode = when (themeMode) {
+                    ThemeMode.System -> ThemeMode.Dark
+                    ThemeMode.Dark -> ThemeMode.Light
+                    ThemeMode.Light -> ThemeMode.System
+                }
+            },
             onSignOut = { isSignedIn = false }
         )
     }
@@ -577,7 +583,7 @@ fun TopActionsRowPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun EditorEmptyPreview() {
-    FirebaseChatTheme {
+    FirebaseChatTheme(ThemeMode.Light) {
         var message by remember { mutableStateOf("") }
 
         Editor(
@@ -591,7 +597,7 @@ private fun EditorEmptyPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun ChatPreview() {
-    FirebaseChatTheme {
+    FirebaseChatTheme(ThemeMode.Light) {
         val users = listOf(
             User("1", "John", null),
             User("2", "Michael", null),
@@ -624,7 +630,7 @@ private fun ChatPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun EditorPreview() {
-    FirebaseChatTheme {
+    FirebaseChatTheme(ThemeMode.Light) {
         var message by remember { mutableStateOf("test message") }
 
         Editor(
@@ -638,7 +644,7 @@ private fun EditorPreview() {
 @Preview(showBackground = true)
 @Composable
 fun SignInButtonPreview() {
-    FirebaseChatTheme {
+    FirebaseChatTheme(ThemeMode.Light) {
         SignInButton(onSignIn = { }, loading = false)
     }
 }

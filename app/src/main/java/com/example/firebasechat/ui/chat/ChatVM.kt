@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebasechat.auth.AuthManager
 import com.example.firebasechat.messages.MessageRepo
+import com.example.firebasechat.settings.SettingsStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatVM @Inject constructor(
     private val authManager: AuthManager,
-    private val messageRepo: MessageRepo
+    private val messageRepo: MessageRepo,
+    private val settingsStore: SettingsStore
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
@@ -26,11 +28,13 @@ class ChatVM @Inject constructor(
         viewModelScope.launch {
             combine(
                 authManager.authState,
-                messageRepo.messages
-            ) { authState, messages ->
-                ChatState(
+                messageRepo.messages,
+                settingsStore.settings
+            ) { authState, messages, settings ->
+                state.value.copy(
                     authState = authState,
-                    messages = messages
+                    messages = messages,
+                    themeMode = settings.themeMode
                 )
             }.collectLatest { newState ->
                 _state.value = newState
@@ -42,7 +46,7 @@ class ChatVM @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             when (event) {
                 is ChatUIEvent.SwapDarkLightMode -> {
-                    // TODO
+                    settingsStore.toggleThemeMode()
                 }
                 is ChatUIEvent.SignIn -> authManager.signIn()
                 is ChatUIEvent.SignOut -> authManager.signOut()
@@ -51,6 +55,7 @@ class ChatVM @Inject constructor(
                 }
                 is ChatUIEvent.OnMessageSent -> {
                     messageRepo.sendMessage(state.value.editor.trim())
+                    _state.value = state.value.copy(editor = "")
                 }
                 is ChatUIEvent.OnReactionPressed -> {
                     messageRepo.toggleReaction(event.emoji, event.messageUid)
