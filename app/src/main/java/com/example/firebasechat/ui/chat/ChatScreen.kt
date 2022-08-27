@@ -208,9 +208,10 @@ private fun MessageList(
             }
         }
 
+        val threshold = remember { with(density) { 48.dp.toPx() } }
         val scrollToBottomVisible by remember {
             derivedStateOf {
-                scrollState.firstVisibleItemIndex != 0 || scrollState.firstVisibleItemScrollOffset > with(density) { 48.dp.toPx() }
+                scrollState.firstVisibleItemIndex != 0 || scrollState.firstVisibleItemScrollOffset > threshold
             }
         }
 

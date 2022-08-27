@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import com.example.firebasechat.auth.AuthManager
 import com.example.firebasechat.settings.SettingsStore
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
     lateinit var settingsStore: SettingsStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         authManager.onActivityCreate(this)
 
