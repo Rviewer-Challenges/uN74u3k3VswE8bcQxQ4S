@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Firebase Chat</string>
+    <string name="web_client_id" translatable="false">935540385679-usa2jjkqe9ipfq44d7mk2htsp65isapk.apps.googleusercontent.com</string>
+
+
+    <string name="info">Information</string>
+    <string name="light_mode">Light mode</string>
+    <string name="dark_mode">Dark mode</string>
+    <string name="auto_mode">Auto mode</string>
+    <string name="sign_out">Sign out</string>
+    <string name="send">Send</string>
+    <string name="editor_placeholder">Type your message…</string>
+    <string name="avatar">Avatar</string>
+    <string name="unknown">Unknown</string>
+    <string name="default_photo_url">https://www.princeton.edu/sites/default/files/styles/half_2x/public/images/2022/02/KOA_Nassau_2697x1517.jpg</string>
+    <string name="join_with_google">Join in with Google</string>
+    <string name="joining">Joining…</string>
+    <string name="scroll_down">Scroll down</string>
+</resources>
