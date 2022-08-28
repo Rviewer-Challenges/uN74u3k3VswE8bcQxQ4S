@@ -9,7 +9,9 @@ Quick and dirty chat app created with the aim to explore Firebase [Authenticatio
 &nbsp; &nbsp;
   <img src="/readme-resources/screen3.png" width="30%">
 </p>
-<img src="/readme-resources/reactions.gif" width="45%">
+<p align="center">
+  <img src="/readme-resources/reactions.gif" width="45%">
+</p>
 
 **[Direct APK download link](https://drive.google.com/uc?id=1YMG1JRc3geMpA_MaVPHasJr9a8ni7dNA&export=download)**
 
@@ -22,9 +24,8 @@ Quick and dirty chat app created with the aim to explore Firebase [Authenticatio
 
 #### Technologies
 
-- [Kotlin](https://kotlinlang.org/), Googles preferred language for Android app development.
+* [Kotlin](https://kotlinlang.org/), Googles preferred language for Android app development.
 * [Jetpack Compose](https://developer.android.com/jetpack/compose), native declarative UI toolkit.
 * [Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) and [Flows](https://developer.android.com/kotlin/flow/stateflow-and-sharedflow), handle state management reactively.
 * [Firebase](https://firebase.google.com), authentication and real-time data services.
-- [Dagger Hilt](https://dagger.dev/hilt/), dependency injection standardized for Android.
-
+* [Dagger Hilt](https://dagger.dev/hilt/), dependency injection standardized for Android.
