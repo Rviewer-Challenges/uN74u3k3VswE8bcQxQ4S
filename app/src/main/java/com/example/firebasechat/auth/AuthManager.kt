@@ -33,7 +33,7 @@ import logcat.logcat
 import javax.inject.Inject
 import javax.inject.Singleton
 
-sealed class AuthState {
+sealed class AuthState { // TODO error state/events
     object Unknown : AuthState()
     object SignedOut : AuthState()
     object SigningIn : AuthState()
@@ -139,7 +139,9 @@ class AuthManagerImpl @Inject constructor(
                         } else {
                             task.result.user?.let { user ->
                                 // Store (or update) the user information
-                                firebaseUsers.child(user.uid).setValue(UserSnapshot(user.displayName, user.photoUrl.toString()))
+                                user.reload().addOnCompleteListener {
+                                    firebaseUsers.child(user.uid).setValue(UserSnapshot(user.displayName, user.photoUrl.toString()))
+                                }
                             }
                         }
                     }

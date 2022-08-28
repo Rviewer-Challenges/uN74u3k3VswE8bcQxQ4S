@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 import logcat.logcat
 import javax.inject.Inject
 
-interface MessageRepo {
+interface MessageRepo { // TODO loading/error states
     val messages: StateFlow<PersistentList<Message>>
     fun sendMessage(content: String)
     fun toggleReaction(emoji: String, messageUid: String)

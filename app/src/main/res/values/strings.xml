@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">firebaseChat</string>
+    <string name="app_name">Firebase Chat</string>
     <string name="web_client_id" translatable="false">935540385679-usa2jjkqe9ipfq44d7mk2htsp65isapk.apps.googleusercontent.com</string>
 
 
